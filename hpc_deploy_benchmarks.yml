@@ -1,0 +1,71 @@
+---
+- host: localhost
+  roles:
+    - role: ansible-role-provision-mr-provisioner
+      mr_provisioner_do_provision: False
+
+  tasks:
+    - name: Retrieve IP of Machine from MrP
+      mr_provisioner_get_ip:
+        mrp_url: "{{ mr_provisioner_url }}"
+        mrp_token: "{{ mr_provisioner_token }}"
+        machine_name: "{{ mr_provisioner_machine_name }}"
+        interface_name: "{{ mr_provisioner_interface_name|default('eth1') }}"
+      register: get_ip
+    - debug: var=get_ip
+
+    - name: Add machine to hosts as target
+      add_host:
+              name: "{{ get_ip['ip'] }}"
+              groups: target
+              ansible_user: root
+              ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      when: get_ip['ip'] is not None
+
+- host: target
+  tasks:
+    - include_tasks: ./tasks/debian_deps.yml
+      when: ansible_distribution == "Debian"
+
+    - include_tasks: ./tasks/centos_deps.yml
+      when: ansible_distribution == "CentOS"
+
+    - include_tasks: ./tasks/opensuse_deps.yml
+      when: ansible_distribution == "OpenSUSE"
+
+    - name: Get the benchmark_harness
+      git:
+          repo: https://github.com/Linaro/benchmark_harness.git
+          dest: "/root/"
+
+    - name: Call the benchmark_harness
+      shell: ./benchmark_controller.py "{{benchmark|quote }}" "{{machine_type|quote }}" "{{compiler|quote }}" --compiler-flags="{{compiler_flags|quote }}" --link-flags="{{link_flags|quote }}" --benchmark-options="{{benchmark_options|quote }}" --benchmark-build-deps="{{benchmark_build_deps|quote }}" --benchmark-run-deps="{{benchmark_run_deps|quote }}" --benchmark-root="{{ benchmark_root | quote | default("/tmp/") }}" -v
+      args:
+        chdir: /root/benchmark_harness/
+
+    - name: Find the path to the results
+      find:
+        paths: /tmp
+        patterns: '{{ benchmark }}*'
+        file_type: directory
+      register: benchresults_path
+
+    - name: Find results
+      find:
+        paths: {{ item.path }}/results/
+        patterns: '*.report'
+      with_items:
+        - benchresults_path.files
+      register: reports_path
+
+    - name: Copy results
+      copy:
+        src: {{ item.path }}
+        dest: /tmp/{{ item.path | basename }}
+        remote_src: yes
+      with_items: reports_path.files
+
+    - name: Move the old dir
+      shell: mv {{ item.path }} /tmp/backup_{{ item.path | basename }}
+      with_items:
+        - benchresults_path.files 
