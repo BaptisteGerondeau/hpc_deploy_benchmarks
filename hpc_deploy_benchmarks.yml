@@ -1,5 +1,5 @@
 ---
-- host: localhost
+- hosts: localhost
   roles:
     - role: ansible-role-provision-mr-provisioner
       mr_provisioner_do_provision: False
@@ -20,9 +20,9 @@
               groups: target
               ansible_user: root
               ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-      when: get_ip['ip'] is not None
+      when: get_ip['ip'] is defined and get_ip['ip'] != ""
 
-- host: target
+- hosts: target
   tasks:
     - include_tasks: ./tasks/debian_deps.yml
       when: ansible_distribution == "Debian"
@@ -36,10 +36,14 @@
     - name: Get the benchmark_harness
       git:
           repo: https://github.com/Linaro/benchmark_harness.git
-          dest: "/root/"
+          dest: "/root/benchmark_harness"
+          version: "{{ branch | default('master') }}"
+
+    - name: Install pip requirements
+      shell: pip3 install -r /root/benchmark_harness/requirements.txt
 
     - name: Call the benchmark_harness
-      shell: ./benchmark_controller.py "{{benchmark|quote }}" "{{machine_type|quote }}" "{{compiler|quote }}" --compiler-flags="{{compiler_flags|quote }}" --link-flags="{{link_flags|quote }}" --benchmark-options="{{benchmark_options|quote }}" --benchmark-build-deps="{{benchmark_build_deps|quote }}" --benchmark-run-deps="{{benchmark_run_deps|quote }}" --benchmark-root="{{ benchmark_root | quote | default("/tmp/") }}" -v
+      shell: './benchmark_controller.py {{benchmark|quote }} {{machine_type|quote }} {{compiler|quote }} "--compiler-flags={{compiler_flags|quote }}" "--link-flags={{link_flags|quote }}" "--benchmark-options={{benchmark_options|quote }}" "--benchmark-build-deps={{benchmark_build_deps|quote }}" "--benchmark-run-deps={{benchmark_run_deps|quote }}" "--benchmark-root={{ benchmark_root | default("/tmp/") | quote }}" -v'
       args:
         chdir: /root/benchmark_harness/
 
@@ -49,23 +53,23 @@
         patterns: '{{ benchmark }}*'
         file_type: directory
       register: benchresults_path
+    - debug: var=benchresults_path
 
     - name: Find results
       find:
-        paths: {{ item.path }}/results/
+        paths: "{{ item.path }}/results/"
         patterns: '*.report'
-      with_items:
-        - benchresults_path.files
+      with_items: "{{ benchresults_path.files }}"
       register: reports_path
+    - debug: var=reports_path
 
     - name: Copy results
       copy:
-        src: {{ item.path }}
-        dest: /tmp/{{ item.path | basename }}
+        src: "{{ item.path }}"
+        dest: "/tmp/{{ item.path | basename }}"
         remote_src: yes
-      with_items: reports_path.files
+      with_items: "{{ reports_path.results[0].files }}"
 
     - name: Move the old dir
-      shell: mv {{ item.path }} /tmp/backup_{{ item.path | basename }}
-      with_items:
-        - benchresults_path.files 
+      shell: mv "{{ item.path }}" "/tmp/backup_$(date +%s)_{{ item.path | basename }}"
+      with_items: "{{ benchresults_path.files }}"
