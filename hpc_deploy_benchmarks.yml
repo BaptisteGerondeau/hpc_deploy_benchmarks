@@ -43,9 +43,11 @@
       shell: pip3 install -r /root/benchmark_harness/requirements.txt
 
     - name: Call the benchmark_harness
-      shell: './benchmark_controller.py {{benchmark|quote }} {{machine_type|quote }} {{compiler|quote }} "--compiler-flags={{compiler_flags|quote }}" "--link-flags={{link_flags|quote }}" "--benchmark-options={{benchmark_options|quote }}" "--benchmark-build-deps={{benchmark_build_deps|quote }}" "--benchmark-run-deps={{benchmark_run_deps|quote }}" "--benchmark-root={{ benchmark_root | default("/tmp/") | quote }}" -v'
+      shell: './benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root={{ benchmark_root | default("/tmp/") | quote }}" -v'
       args:
         chdir: /root/benchmark_harness/
+      register: benchmark_call_output
+    - debug: var=benchmark_call_output.stderr_lines
 
     - name: Find the path to the results
       find:
