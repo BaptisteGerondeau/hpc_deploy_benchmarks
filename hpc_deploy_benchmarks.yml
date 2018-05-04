@@ -40,7 +40,7 @@
           version: "{{ branch | default('master') }}"
 
     - name: Install pip requirements
-      shell: pip3 install -r /root/benchmark_harness/requirements.txt
+      shell: python3 -m pip install -r /root/benchmark_harness/requirements.txt
 
     - name: Call the benchmark_harness
       shell: './benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root={{ benchmark_root | default("/tmp/") | quote }}" -v'
