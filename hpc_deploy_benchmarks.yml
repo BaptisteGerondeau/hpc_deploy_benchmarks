@@ -72,6 +72,10 @@
         remote_src: yes
       with_items: "{{ reports_path.results[0].files }}"
 
+    - name: Copy results to fileserver
+      shell: (echo "put {{ item.path }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }} 
+      with_items: "{{ reports_path.results[0].files }}"
+
     - name: Move the old dir
       shell: mv "{{ item.path }}" "/tmp/backup_$(date +%s)_{{ item.path | basename }}"
       with_items: "{{ benchresults_path.files }}"
