@@ -65,16 +65,20 @@
       register: reports_path
     - debug: var=reports_path
 
+    - name: Make a directory with a nice name for sftp
+      file:
+        path: "/tmp/{{ sftp_dirname }}"
+        state: directory
+
     - name: Copy results
       copy:
         src: "{{ item.path }}"
-        dest: "/tmp/{{ item.path | basename }}"
+        dest: "/tmp/{{ sftp_dirname}}/{{ item.path | basename }}"
         remote_src: yes
       with_items: "{{ reports_path.results[0].files }}"
 
     - name: Copy results to fileserver
-      shell: (echo "put {{ item.path }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }} 
-      with_items: "{{ reports_path.results[0].files }}"
+      shell: (echo "put -r /tmp/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }} 
 
     - name: Move the old dir
       shell: mv "{{ item.path }}" "/tmp/backup_$(date +%s)_{{ item.path | basename }}"
