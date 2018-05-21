@@ -80,6 +80,13 @@
     - name: Copy results to fileserver
       shell: (echo "put -r /tmp/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }} 
 
-    - name: Move the old dir
-      shell: mv "{{ item.path }}" "/tmp/backup_$(date +%s)_{{ item.path | basename }}"
+    - name: Remove the old dir
+      file: 
+        state: absent
+        path: "{{ item.path }}/"
       with_items: "{{ benchresults_path.files }}"
+
+    - name: Remove the nicely named sftp dir
+      file:
+        state: absent
+        path: "/tmp/{{ sftp_dirname }}/"
