@@ -42,8 +42,16 @@
     - name: Install pip requirements
       shell: python3 -m pip install -r /root/benchmark_harness/requirements.txt
 
+    - name: Wipe results directory
+      file:
+          path: "/root/jenkins/"
+          state: "{{ item }}"
+      with_items:
+          - absent
+          - directory
+
     - name: Call the benchmark_harness
-      shell: './benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root={{ benchmark_root | default("/tmp/") | quote }}" "--sftp-user={{ sftp_user }}"'
+      shell: './benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root="/root/jenkins/"" "--sftp-user={{ sftp_user }}"'
       args:
         chdir: /root/benchmark_harness/
       register: benchmark_call_output
@@ -51,7 +59,7 @@
 
     - name: Find the path to the results
       find:
-        paths: /tmp
+        paths: /root/jenkins
         patterns: '{{ benchmark }}*'
         file_type: directory
       register: benchresults_path
@@ -67,18 +75,18 @@
 
     - name: Make a directory with a nice name for sftp
       file:
-        path: "/tmp/{{ sftp_dirname }}"
+        path: "/root/jenkins/{{ sftp_dirname }}"
         state: directory
 
     - name: Copy results
       copy:
         src: "{{ item.path }}"
-        dest: "/tmp/{{ sftp_dirname}}/{{ item.path | basename }}"
+        dest: "/root/jenkins/{{ sftp_dirname}}/{{ item.path | basename }}"
         remote_src: yes
       with_items: "{{ reports_path.results[0].files }}"
 
     - name: Copy results to fileserver
-      shell: (echo "put -r /tmp/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }} 
+      shell: (echo "put -r /root/jenkins/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }}
 
     - name: Remove the old dir
       file: 
@@ -89,4 +97,4 @@
     - name: Remove the nicely named sftp dir
       file:
         state: absent
-        path: "/tmp/{{ sftp_dirname }}/"
+        path: "/root/jenkins/{{ sftp_dirname }}/"
