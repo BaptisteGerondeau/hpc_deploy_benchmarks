@@ -1,26 +1,25 @@
 ---
 - hosts: localhost
-  roles:
-    - role: ansible-role-provision-mr-provisioner
-      mr_provisioner_do_provision: False
-
   tasks:
+    - name: Checkout provisioner client
+      git:
+        repo: https://github.com/Linaro/mr-provisioner-client
+        dest: mr-provisioner-client
+
     - name: Retrieve IP of Machine from MrP
-      mr_provisioner_get_ip:
-        mrp_url: "{{ mr_provisioner_url }}"
-        mrp_token: "{{ mr_provisioner_token }}"
-        machine_name: "{{ mr_provisioner_machine_name }}"
-        interface_name: "{{ mr_provisioner_interface_name|default('eth1') }}"
-      register: get_ip
-    - debug: var=get_ip
+      shell: "./mr-provisioner-client/mrp_client.py getip \
+                              {{ mr_provisioner_machine_name }} \
+                              --mrp-url={{ mr_provisioner_url }} \
+                              --mrp-token={{mr_provisioner_token}}"
+      register: ip
 
     - name: Add machine to hosts as target
       add_host:
-              name: "{{ get_ip['ip'] }}"
+              name: "{{ ip.stdout }}"
               groups: target
               ansible_user: root
               ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-      when: get_ip['ip'] is defined and get_ip['ip'] != ""
+      when: ip is defined and ip != ""
 
 - hosts: target
   tasks:
