@@ -35,30 +35,28 @@
     - name: Get the benchmark_harness
       git:
           repo: https://github.com/Linaro/benchmark_harness.git
-          dest: "/root/benchmark_harness"
+          dest: benchmark_harness
           version: "{{ branch | default('master') }}"
 
     - name: Install pip requirements
-      shell: python3 -m pip install -r /root/benchmark_harness/requirements.txt
+      shell: python3 -m pip install -r ./benchmark_harness/requirements.txt
 
     - name: Wipe results directory
       file:
-          path: "/root/jenkins/"
+          path: "results"
           state: "{{ item }}"
       with_items:
           - absent
           - directory
 
     - name: Call the benchmark_harness
-      shell: './benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root="/root/jenkins/""'
-      args:
-        chdir: /root/benchmark_harness/
+      shell: './benchmark_harness/benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root="results""'
       register: benchmark_call_output
     - debug: var=benchmark_call_output.stderr_lines
 
     - name: Find the path to the results
       find:
-        paths: /root/jenkins
+        paths: "results"
         patterns: '{{ benchmark }}*'
         file_type: directory
       register: benchresults_path
@@ -74,18 +72,18 @@
 
     - name: Make a directory with a nice name for sftp
       file:
-        path: "/root/jenkins/{{ sftp_dirname }}"
+        path: "results/{{ sftp_dirname }}"
         state: directory
 
     - name: Copy results
       copy:
         src: "{{ item.path }}"
-        dest: "/root/jenkins/{{ sftp_dirname}}/{{ item.path | basename }}"
+        dest: "results/{{ sftp_dirname}}/{{ item.path | basename }}"
         remote_src: yes
       with_items: "{{ reports_path.results[0].files }}"
 
     - name: Copy results to fileserver
-      shell: (echo "put -r /root/jenkins/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }}
+      shell: (echo "put -r results/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }}
 
     - name: Remove the old dir
       file: 
@@ -96,4 +94,4 @@
     - name: Remove the nicely named sftp dir
       file:
         state: absent
-        path: "/root/jenkins/{{ sftp_dirname }}/"
+        path: "results/{{ sftp_dirname }}/"
