@@ -9,7 +9,6 @@
     - git
     - build-essential
     - linux-perf
-    - linux-reference-perf
     - unzip
     - lhasa
 

@@ -53,8 +53,8 @@
       shell: './benchmark_harness/benchmark_controller.py {{benchmark|default("") }} {{machine_type|default("") }} {{compiler|default("") }} "--compiler-flags={{compiler_flags|default("") }}" "--link-flags={{link_flags|default("") }}" "--benchmark-options={{benchmark_options|default("") }}" "--benchmark-build-deps={{benchmark_build_deps|default("") }}" "--benchmark-run-deps={{benchmark_run_deps|default("") }}" "--benchmark-root="results""'
       register: benchmark_call_output
     - debug: var=benchmark_call_output.stderr_lines
-
-    - name: Find the path to the results
+    
+    - name: Find where the harness put the results  
       find:
         paths: "results"
         patterns: '{{ benchmark }}*'
@@ -83,7 +83,7 @@
       with_items: "{{ reports_path.results[0].files }}"
 
     - name: Copy results to fileserver
-      shell: (echo "put -r results/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }}
+      shell: (echo "put -r results/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/{{ vendor }}/benchmark
 
     - name: Remove the old dir
       file: 
