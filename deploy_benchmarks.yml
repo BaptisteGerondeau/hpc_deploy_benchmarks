@@ -54,20 +54,22 @@
       register: benchmark_call_output
     - debug: var=benchmark_call_output.stderr_lines
 
-    - name: Find the path to the results
+    - name: Find where the harness put the results
       find:
         paths: "results"
         patterns: '{{ benchmark }}*'
         file_type: directory
       register: benchresults_path
-    - debug: var=benchresults_path
+    - debug: var=benchresults_path.files
 
     - name: Find results
       find:
         paths: "{{ item.path }}/results/"
-        patterns: '*.report'
+        patterns: "^.*?\\.(?:err|out)$"
+        use_regex: yes
       with_items: "{{ benchresults_path.files }}"
       register: reports_path
+      failed_when: reports_path.matched == 0
     - debug: var=reports_path
 
     - name: Make a directory with a nice name for sftp
