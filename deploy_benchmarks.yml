@@ -83,7 +83,7 @@
       with_items: "{{ reports_path.results[0].files }}"
 
     - name: Copy results to fileserver
-      shell: (echo "put -r results/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/benchmark/{{ vendor }}
+      shell: (echo "put -r results/{{ sftp_dirname }}" && echo "exit") | sftp -o ForwardAgent=yes -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  {{sftp_user}}@{{ sftp_server_ip }}:/{{ vendor }}/benchmark
 
     - name: Remove the old dir
       file: 
