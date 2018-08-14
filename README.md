@@ -35,4 +35,4 @@ These are the extra arguments needed to get it to run
 * sftp_dirname:
 * sftp_user:
 * sftp_server_ip:
-* vendor: (Linaro specific) should be moved to sftp_path
+* sftp_path:
