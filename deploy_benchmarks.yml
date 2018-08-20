@@ -32,6 +32,14 @@
     - include_tasks: ./tasks/opensuse_deps.yml
       when: ansible_distribution == "OpenSUSE"
 
+    - name: Wipe harness directory
+      file:
+          path: "benchmark_harness"
+          state: "{{ item }}"
+      with_items:
+          - absent
+          - directory
+
     - name: Get the benchmark_harness
       git:
           repo: https://github.com/Linaro/benchmark_harness.git
